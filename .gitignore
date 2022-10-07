@@ -1,3 +1,5 @@
-st-vincents-university-hospital-university-college-dublin-sleep-apnea-database-1.0.0/
 .idea/
 physionet.org/
+test/
+train/
+img_dataset/

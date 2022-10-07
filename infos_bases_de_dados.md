@@ -36,8 +36,58 @@ Anotações:
 
 Ano: 2018
 
-Quantidade de pacientes: 25 (21H e 4M)
+Quantidade de pacientes: 1983 (1290H e 693M)
 
 Sinais:
 
+- **EEG (C3-M2)**
+- **EEG (C4-M1)**
+- **EEG (F3-M2)**
+- **EEG (F4-M1)**
+- **EEG (O1-M2)**
+- **EEG (O2-M1)**
+- Left EOG (E1-M2)
+- EMG (Chin1-Chin2)
+- ABD
+- CHEST
+- AIRFLOW
+- SaO2
+- ECG
+
 Anotações:
+
+- Hypopnea (Central, Mixed e Obstructive)
+- Apnea (Central, Mixed e Obstructive)
+- Outros
+
+## DB #3 - MIT-BIH Polysomnographic Database
+
+Ano: 1999
+
+Quantidade de pacientes: 16 (16H)
+
+Sinais:
+- AHI
+- ECG
+- BP
+- **EEG** (sinal diferente para diferentes pacientes)
+- Resp
+- Resp
+- EOG
+- EMG
+- SV
+- SO2
+
+Anotações:
+- H	Hypopnea
+-	HA	Hypopnea with arousal
+-	OA	Obstructive apnea
+-	X	Obstructive apnea with arousal
+-	CA	Central apnea
+-	CAA	Central apnea with arousal
+-	L	Leg movements
+-	LA	Leg movements with arousal
+-	A	Unspecified arousal
+-	MT	Movement time
+
+Each annotation in the `.st' files applies to the thirty seconds of the record that follow the annotation.
