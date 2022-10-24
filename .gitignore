@@ -3,3 +3,9 @@ physionet.org/
 test/
 train/
 img_dataset/
+data/
+imagens/
+apnea/
+normal/
+apnea.zip
+imagens_exemplo_ucddb.zip
