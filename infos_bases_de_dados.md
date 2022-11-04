@@ -27,6 +27,8 @@ Sinais:
 - Snoring (tracheal microphone)
 - Body position
 
+Frequencia de amostragem: 128Hz
+
 Anotações:
 
 - Hypopnea (Central, Mixed e Obstructive)
@@ -54,6 +56,8 @@ Sinais:
 - SaO2
 - ECG
 
+Frequencia de amostragem: 200Hz
+
 Anotações:
 
 - Hypopnea (Central, Mixed e Obstructive)
@@ -77,6 +81,8 @@ Sinais:
 - EMG
 - SV
 - SO2
+
+Frequencia de amostragem: 250Hz
 
 Anotações:
 - H	Hypopnea

@@ -4,8 +4,9 @@ test/
 train/
 img_dataset/
 data/
+data-raw/
 imagens/
-apnea/
-normal/
+apnea2/
+normal2/
 apnea.zip
 imagens_exemplo_ucddb.zip
