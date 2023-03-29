@@ -2,7 +2,7 @@ import generator_lib
 
 # CONFIGURE THIS
 MODE = "default"
-DATABASE_PATH = "E:\\tcc\\base1\\physionet.org\\files\\ucddb\\1.0.0\\"
+DATABASE_PATH = "/physionet.org/files/ucddb/1.0.0\\"
 STORAGE_PATH = "E:\\tcc\\storage"
 FRAME_LENGTH = 5
 FRAME_SHIFT = 2
