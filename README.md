@@ -14,7 +14,6 @@ Quer ler meu TCC? ainda não terminei 🤣
 - Pandas
 - Numpy
 - Seaborn
-- Pyplot
 
 # Base de dados
 
