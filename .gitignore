@@ -1,13 +1,5 @@
 .idea/
 physionet.org/
-test/
-train/
-img_dataset/
 data*/
-data-raw/
-imagens/
-apnea2/
 normal2/
-apnea.zip
-imagens_exemplo_ucddb.zip
 tcc_generate_images_db1.ipynb

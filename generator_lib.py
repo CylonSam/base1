@@ -2,6 +2,7 @@
 import math
 import os
 import shutil
+import uuid
 
 import pyedflib
 import datetime
@@ -11,7 +12,7 @@ import numpy as np
 from pathlib import Path
 from typing import Generator
 from matplotlib.image import imsave
-from pyts.image import RecurrencePlot
+from pyts.image import RecurrencePlot, GramianAngularField
 
 
 def compare_datetime(datetime_to_compare, datetime_ref):
@@ -74,14 +75,12 @@ def read_eeg_signals(database_path: str, channel: str, eligible_subjects):
     :returns: Generator that yields each subject EEG signal
     """
 
-    print("reading subject info...")
     subjects_details = pd.read_excel(database_path + 'SubjectDetails.xls')
 
     subjects = subjects_details['Study Number']
 
     channel = 3 if channel == 'c3' else 4
 
-    print("reading database...")
     subjects_eeg_signals = (pyedflib.EdfReader(
         database_path + subjects[p].lower() + '.rec').readSignal(channel) for p in eligible_subjects)
 
@@ -167,23 +166,23 @@ def create_frames_labels(frames: np.ndarray, frame_length: int, frame_shift: int
         event_current_second += frame_shift
 
 
-def save_frame_recurrence_plot_image(frame: np.ndarray, name: str, threshold: float, data_path: Path):
+def save_frame_recurrence_plot_image(imaging_solution: str, frame: np.ndarray, name: str, threshold: float, data_path: Path):
     """
     Creates recurrence plot image for a signal frame and saves it locally
 
+    :param imaging_solution: Imaging solution for time series (GAF or RP)
     :param frame: A single frame from an EEG signal
-    :param label: Frame label (apnea or non apnea)
     :param name: Name to be used when saving the file
     :param threshold: Threshold to be used when creating the recurrence plot
     :param data_path: The absolute path of folder to be used when saving the images
     """
-    transformer = RecurrencePlot(threshold=threshold)
+    transformer = RecurrencePlot(threshold=threshold) if imaging_solution == "RP" else GramianAngularField()
     rp = transformer.transform(np.array([frame]))
     rp_matrix = rp[0]
     imsave(Path(data_path, f"{name}.png"), rp_matrix, cmap='binary')
 
 
-def log(data_path: str, generation_events: str, subjects: list, sample_frequency: int, frame_length: int,
+def log(data_path: Path, generation_events: str, subjects: list, sample_frequency: int, frame_length: int,
         frame_shift: int, rp_threshold: float, total: int):
     generation_timestamp = datetime.datetime.now()
     image_size = sample_frequency * frame_length
@@ -200,42 +199,7 @@ def log(data_path: str, generation_events: str, subjects: list, sample_frequency
         file.write(f"total_sample: {total}{os.linesep}")
 
 
-def balance_dataset(data_pool_path: Path):
-    random.seed(42)
-
-    apnea_images = []
-    non_apnea_images = []
-
-    for (dir_path, dir_names, filenames) in os.walk(data_pool_path):
-        for filename in filenames:
-            if filename[0] == "a":
-                apnea_images.append(filename)
-            elif filename[0] == "n":
-                non_apnea_images.append(filename)
-        break
-
-    normal_images_to_delete = []
-    for patient in range(25):
-        print("flagging images for deletion - patient #" + str(patient))
-        patient_apnea_images = list(filter(lambda x: x.split("_")[1] == str(patient), apnea_images))
-        patient_normal_images = list(filter(lambda y: y.split("_")[1] == str(patient), non_apnea_images))
-
-        apnea_images_length = len(patient_apnea_images)
-        normal_images_length = len(patient_normal_images)
-
-        normal_images_to_delete_length = max(normal_images_length - apnea_images_length, 0)
-
-        normal_images_to_delete.extend(random.sample(patient_normal_images, k=normal_images_to_delete_length))
-
-    print("starting deletion..")
-    for n in normal_images_to_delete:
-        path_to_file = Path(data_pool_path, n)
-        os.unlink(path_to_file)
-
-    return len(apnea_images)
-
-
-def divide_dataset(mode="default", eligible_subjects=None, data_pool_path: Path = ""):
+def divide_dataset(test_subjects, eligible_subjects=None, data_pool_path: Path = "", dataset_id=""):
     random.seed(42)
     random.shuffle(eligible_subjects)
 
@@ -244,58 +208,61 @@ def divide_dataset(mode="default", eligible_subjects=None, data_pool_path: Path 
         images.extend(filenames)
         break
 
-    subjects_length = len(eligible_subjects)
+    # subjects_length = len(eligible_subjects)
 
     data_directory = data_pool_path.parent
 
-    datasets = [Path(data_directory, "data")]
+    dataset = Path(data_directory, f"{dataset_id}_data")
+    if len(test_subjects) == 1:
+        dataset = Path(data_directory, f"{dataset_id}_subject_{test_subjects[0]}")
+    # test_size = 0.25
 
-    test_size = 0.25
-
-    if mode == "wrong":
-        test_size = 0
-    elif mode == "subject_spec":
-        test_size = 1 / subjects_length
-        datasets = []
-        for subject in eligible_subjects:
-            subject_data_path = Path(data_directory, f"subject_{subject}")
-            datasets.append(subject_data_path)
+    # if mode == "wrong":
+    #     test_size = 0
+    # elif mode == "subject_spec":
+    #     test_size = 1 / subjects_length
+    #     datasets = []
+    #     for subject in eligible_subjects:
+    #         subject_data_path = Path(data_directory, f"{dataset_id}_subject_{subject}")
+    #         datasets.append(subject_data_path)
 
     # for each dataset, should create divisions
-    for dataset in datasets:
-        dataset_train_path = Path(dataset, "train")
-        dataset_test_path = Path(dataset, "test")
+    # for dataset in datasets:
+    dataset_train_path = Path(dataset, "train")
+    dataset_test_path = Path(dataset, "test")
 
-        # creating required directories
-        os.mkdir(dataset)
-        os.mkdir(dataset_train_path)
-        os.mkdir(dataset_test_path)
-        os.mkdir(Path(dataset_train_path, "apnea"))
-        os.mkdir(Path(dataset_train_path, "non_apnea"))
-        os.mkdir(Path(dataset_test_path, "apnea"))
-        os.mkdir(Path(dataset_test_path, "non_apnea"))
+    # creating required directories
+    os.mkdir(dataset)
+    os.mkdir(dataset_train_path)
+    os.mkdir(dataset_test_path)
+    os.mkdir(Path(dataset_train_path, "apnea"))
+    os.mkdir(Path(dataset_train_path, "non_apnea"))
+    os.mkdir(Path(dataset_test_path, "apnea"))
+    os.mkdir(Path(dataset_test_path, "non_apnea"))
 
-        # randomly chooses test subjects for this dataset
-        test_subjects = random.sample(eligible_subjects, math.floor(test_size * subjects_length))
+    # randomly chooses test subjects for this dataset
+    # test_subjects = random.sample(eligible_subjects, math.floor(test_size * subjects_length))
 
-        # iterates over subjects and assign a place (train or test) for each one
-        for subject in eligible_subjects:
-            subject_apnea_images = list(filter(lambda x: x.split("_")[1] == str(subject) and x[0] == "a", images))
-            subject_non_apnea_images = list(filter(lambda y: y.split("_")[1] == str(subject) and y[0] == "n", images))
+    # iterates over subjects and assign a place (train or test) for each one
+    for subject in eligible_subjects:
+        subject_apnea_images = list(filter(lambda x: x.split("_")[1] == str(subject) and x[0] == "a", images))
+        subject_non_apnea_images = list(filter(lambda y: y.split("_")[1] == str(subject) and y[0] == "n", images))
 
-            subset = "test" if subject in test_subjects else "train"
+        subset = "test" if subject in test_subjects else "train"
 
-            subset_apnea_path = Path(dataset, subset, "apnea")
-            subset_non_apnea_path = Path(dataset, subset, "non_apnea")
+        subset_apnea_path = Path(dataset, subset, "apnea")
+        subset_non_apnea_path = Path(dataset, subset, "non_apnea")
 
-            for i in subject_apnea_images:
-                shutil.move(Path(data_pool_path, i), Path(subset_apnea_path, i))
-            for j in subject_non_apnea_images:
-                shutil.move(Path(data_pool_path, j), Path(subset_non_apnea_path, j))
+        for i in subject_apnea_images:
+            shutil.move(Path(data_pool_path, i), Path(subset_apnea_path, i))
+        for j in subject_non_apnea_images:
+            shutil.move(Path(data_pool_path, j), Path(subset_non_apnea_path, j))
+    return dataset
 
 
-def generate_rp_images_dataset(mode: str, database_path: str, storage_path: str, sample_frequency: int,
-                               frame_length: int, frame_shift: int, threshold: float):
+def generate_rp_images_dataset(database_path: str, storage_path: str, sample_frequency: int,
+                               frame_length: int, frame_shift: int, imaging_solution: str,
+                               threshold: float, test_subjects: list):
     eligible_subjects, subjects_annotations = read_annotations(database_path)
     subjects_eeg_signals = read_eeg_signals(database_path, 'c3', eligible_subjects)
     subjects_frames = create_frames(subjects_eeg_signals, sample_frequency, frame_length, frame_shift)
@@ -305,9 +272,12 @@ def generate_rp_images_dataset(mode: str, database_path: str, storage_path: str,
     os.mkdir(pool_path)
 
     subject_count = 0
+    total_images_count = 0
     for subject_frames in subjects_frames:
-
         frame_count = 0
+
+        subject_non_apnea_frames = {}
+        subject_apnea_count = 0
         subject_frames_with_label = create_frames_labels(subject_frames, frame_length, frame_shift,
                                                          subjects_annotations[subject_count])
 
@@ -315,38 +285,80 @@ def generate_rp_images_dataset(mode: str, database_path: str, storage_path: str,
         for frame_with_label in subject_frames_with_label:
             apnea_time_slice = int(frame_with_label[2])
             has_apnea = frame_with_label[1]
-            label_name = "apnea" if has_apnea else "non-apnea"
 
-            save_frame_recurrence_plot_image(frame=frame_with_label[0],
-                                             name=f"{label_name}_{eligible_subjects[subject_count]}_{frame_count}_{apnea_time_slice}",
+            if has_apnea:
+                subject_apnea_count += 1
+                total_images_count += 2
+
+                save_frame_recurrence_plot_image(imaging_solution=imaging_solution,
+                                                 frame=frame_with_label[0],
+                                                 name=f"apnea_{eligible_subjects[subject_count]}_{frame_count}_{apnea_time_slice}",
+                                                 threshold=threshold,
+                                                 data_path=pool_path)
+            else:
+                subject_non_apnea_frames[str(frame_count)] = frame_with_label
+            frame_count += 1
+
+        subject_non_apnea_frames_to_save = random.sample(subject_non_apnea_frames.keys(), k=subject_apnea_count)
+
+        for frame_index in subject_non_apnea_frames_to_save:
+            save_frame_recurrence_plot_image(imaging_solution=imaging_solution,
+                                             frame=subject_non_apnea_frames[frame_index][0],
+                                             name=f"non-apnea_{eligible_subjects[subject_count]}_{frame_index}",
                                              threshold=threshold,
                                              data_path=pool_path)
-            frame_count += 1
-        subject_count += 1
 
-    total_img = balance_dataset(pool_path)
-    divide_dataset(mode, eligible_subjects, pool_path)
-    log(storage_path,
+        subject_count += 1
+    print(f"{datetime.datetime.now()} dividing dataset")
+    dataset_path = divide_dataset(test_subjects, eligible_subjects, pool_path, uuid.uuid4().hex)
+    os.rmdir(pool_path)
+    log(dataset_path,
         "APNEA",
         eligible_subjects,
         sample_frequency,
         frame_length,
         frame_shift,
         threshold,
-        total_img)
+        total_images_count)
 
 
-class RPImageGenerator:
-    def __init__(self, mode, database_path: str, storage_path: str, frame_length: int, frame_shift: int,
-                 threshold: float, sample_frequency: int):
-        self.mode = mode
-        self.database_path = database_path
-        self.storage_path = storage_path
-        self.frame_length = frame_length
-        self.frame_shift = frame_shift
-        self.threshold = threshold
-        self.sample_frequency = sample_frequency
+def generate(mode: str, database_path: str, storage_path: str, sample_frequency: int,
+             frame_length: int, frame_shift: int, imaging_solution: str, threshold: float):
+    eligible_subjects, subjects_annotations = read_annotations(database_path)
+    eligible_subjects_length = len(eligible_subjects)
 
-    def generate(self):
-        generate_rp_images_dataset(self.mode, self.database_path, self.storage_path, self.sample_frequency,
-                                   self.frame_length, self.frame_shift, self.threshold)
+    random.shuffle(eligible_subjects)
+
+    times_to_run = 1
+
+    test_size = 0.25
+
+    if mode == "wrong":
+        test_size = 0
+    elif mode == "subject_spec":
+        test_size = 1 / eligible_subjects_length
+        times_to_run = eligible_subjects_length
+
+    for run in range(times_to_run):
+        # randomly chooses test subjects for this dataset
+        test_subjects = eligible_subjects[run:run+math.floor(test_size * eligible_subjects_length)]
+
+        generate_rp_images_dataset(database_path, storage_path, sample_frequency, frame_length, frame_shift,
+                                   imaging_solution, threshold, test_subjects)
+
+
+# class RPImageGenerator:
+#     def __init__(self, mode, database_path: str, storage_path: str, frame_length: int, frame_shift: int,
+#                  imaging_solution: str, threshold: float, sample_frequency: int):
+#         self.mode = mode
+#         self.database_path = database_path
+#         self.storage_path = storage_path
+#         self.frame_length = frame_length
+#         self.frame_shift = frame_shift
+#         self.imaging_solution = imaging_solution
+#         self.threshold = threshold
+#         self.sample_frequency = sample_frequency
+#
+#     def generate(self):
+#         generate_rp_images_dataset(self.mode, self.database_path, self.storage_path, self.sample_frequency,
+#                                    self.frame_length, self.frame_shift, self.threshold)
