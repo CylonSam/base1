@@ -1,4 +1,3 @@
-# UCDDB_PATH = './physionet.org/files/ucddb/1.0.0/'
 import math
 import os
 import shutil
@@ -12,8 +11,16 @@ import numpy as np
 from pathlib import Path
 from typing import Generator
 from matplotlib.image import imsave
+from scipy.signal import butter, filtfilt
 from pyts.image import RecurrencePlot, GramianAngularField
 
+
+def highpass_filter(data, fs, cutoff):
+    nyq = 0.5 * fs
+    normal_cutoff = cutoff / nyq
+    b, a = butter(4, normal_cutoff, btype='high', analog=False)
+    filtered_data = filtfilt(b, a, data)
+    return filtered_data
 
 def compare_datetime(datetime_to_compare, datetime_ref):
     res = (datetime.datetime.strptime(datetime_to_compare, '%H:%M:%S') - datetime_ref).total_seconds()
@@ -108,9 +115,11 @@ def create_frames(subjects_eeg_signals: Generator, sample_frequency: int, frame_
         step = frame_shift * sample_frequency
 
         signal_length = len(subject_eeg_signal)
+        
+        filtered_subject_eeg_signal = highpass_filter(subject_eeg_signal, 128, 1)
 
         yield np.array(
-            [subject_eeg_signal[i:frame_samples + i] for i in range(0, signal_length - frame_samples, step)])
+            [filtered_subject_eeg_signal[i:frame_samples + i] for i in range(0, signal_length - frame_samples, step)])
 
 
 def create_frames_labels(frames: np.ndarray, frame_length: int, frame_shift: int, annotations: pd.DataFrame):
@@ -179,7 +188,7 @@ def save_frame_recurrence_plot_image(imaging_solution: str, frame: np.ndarray, n
     transformer = RecurrencePlot(threshold=threshold) if imaging_solution == "RP" else GramianAngularField()
     rp = transformer.transform(np.array([frame]))
     rp_matrix = rp[0]
-    imsave(Path(data_path, f"{name}.png"), rp_matrix, cmap='binary')
+    imsave(Path(data_path, f"{name}.png"), rp_matrix, cmap="binary")
 
 
 def log(data_path: Path, generation_events: str, subjects: list, sample_frequency: int, frame_length: int,
@@ -208,26 +217,12 @@ def divide_dataset(test_subjects, eligible_subjects=None, data_pool_path: Path =
         images.extend(filenames)
         break
 
-    # subjects_length = len(eligible_subjects)
-
     data_directory = data_pool_path.parent
 
-    dataset = Path(data_directory, f"{dataset_id}_data")
+    dataset = Path(data_directory, f"data_default")
     if len(test_subjects) == 1:
-        dataset = Path(data_directory, f"{dataset_id}_subject_{test_subjects[0]}")
-    # test_size = 0.25
+        dataset = Path(data_directory, f"data_subject_{test_subjects[0]}")
 
-    # if mode == "wrong":
-    #     test_size = 0
-    # elif mode == "subject_spec":
-    #     test_size = 1 / subjects_length
-    #     datasets = []
-    #     for subject in eligible_subjects:
-    #         subject_data_path = Path(data_directory, f"{dataset_id}_subject_{subject}")
-    #         datasets.append(subject_data_path)
-
-    # for each dataset, should create divisions
-    # for dataset in datasets:
     dataset_train_path = Path(dataset, "train")
     dataset_test_path = Path(dataset, "test")
 
@@ -239,9 +234,6 @@ def divide_dataset(test_subjects, eligible_subjects=None, data_pool_path: Path =
     os.mkdir(Path(dataset_train_path, "non_apnea"))
     os.mkdir(Path(dataset_test_path, "apnea"))
     os.mkdir(Path(dataset_test_path, "non_apnea"))
-
-    # randomly chooses test subjects for this dataset
-    # test_subjects = random.sample(eligible_subjects, math.floor(test_size * subjects_length))
 
     # iterates over subjects and assign a place (train or test) for each one
     for subject in eligible_subjects:
@@ -298,7 +290,7 @@ def generate_rp_images_dataset(database_path: str, storage_path: str, sample_fre
             else:
                 subject_non_apnea_frames[str(frame_count)] = frame_with_label
             frame_count += 1
-
+        random.seed(42)
         subject_non_apnea_frames_to_save = random.sample(subject_non_apnea_frames.keys(), k=subject_apnea_count)
 
         for frame_index in subject_non_apnea_frames_to_save:
@@ -327,11 +319,13 @@ def generate(mode: str, database_path: str, storage_path: str, sample_frequency:
     eligible_subjects, subjects_annotations = read_annotations(database_path)
     eligible_subjects_length = len(eligible_subjects)
 
+    random.seed(42)
+
     random.shuffle(eligible_subjects)
 
     times_to_run = 1
 
-    test_size = 0.25
+    test_size = 0.2
 
     if mode == "wrong":
         test_size = 0
@@ -345,20 +339,3 @@ def generate(mode: str, database_path: str, storage_path: str, sample_frequency:
 
         generate_rp_images_dataset(database_path, storage_path, sample_frequency, frame_length, frame_shift,
                                    imaging_solution, threshold, test_subjects)
-
-
-# class RPImageGenerator:
-#     def __init__(self, mode, database_path: str, storage_path: str, frame_length: int, frame_shift: int,
-#                  imaging_solution: str, threshold: float, sample_frequency: int):
-#         self.mode = mode
-#         self.database_path = database_path
-#         self.storage_path = storage_path
-#         self.frame_length = frame_length
-#         self.frame_shift = frame_shift
-#         self.imaging_solution = imaging_solution
-#         self.threshold = threshold
-#         self.sample_frequency = sample_frequency
-#
-#     def generate(self):
-#         generate_rp_images_dataset(self.mode, self.database_path, self.storage_path, self.sample_frequency,
-#                                    self.frame_length, self.frame_shift, self.threshold)

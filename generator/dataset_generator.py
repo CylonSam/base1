@@ -6,11 +6,11 @@ start = time.time()
 
 # CONFIGURE THIS
 MODE = "default"
-DATABASE_PATH = "./physionet.org/files/ucddb/1.0.0/"
+DATABASE_PATH = "../physionet.org/files/ucddb/1.0.0/"
 STORAGE_PATH = "C:/Users/saman/Documents/storage/"
-FRAME_LENGTH = 5
-FRAME_SHIFT = 2
-IMAGING_SOLUTION = "GAF"
+FRAME_LENGTH = 8
+FRAME_SHIFT = 5
+IMAGING_SOLUTION = "RP"
 THRESHOLD = 0.12
 SAMPLE_FREQUENCY = 128
 
