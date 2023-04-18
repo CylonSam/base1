@@ -116,10 +116,10 @@ def create_frames(subjects_eeg_signals: Generator, sample_frequency: int, frame_
 
         signal_length = len(subject_eeg_signal)
         
-        filtered_subject_eeg_signal = highpass_filter(subject_eeg_signal, 128, 1)
+        # filtered_subject_eeg_signal = highpass_filter(subject_eeg_signal, 128, 1)
 
         yield np.array(
-            [filtered_subject_eeg_signal[i:frame_samples + i] for i in range(0, signal_length - frame_samples, step)])
+            [subject_eeg_signal[i:frame_samples + i] for i in range(0, signal_length - frame_samples, step)])
 
 
 def create_frames_labels(frames: np.ndarray, frame_length: int, frame_shift: int, annotations: pd.DataFrame):
@@ -314,8 +314,9 @@ def generate_rp_images_dataset(database_path: str, storage_path: str, sample_fre
         total_images_count)
 
 
-def generate(mode: str, database_path: str, storage_path: str, sample_frequency: int,
+def generate(mode: str, test_subject: int, database_path: str, storage_path: str, sample_frequency: int,
              frame_length: int, frame_shift: int, imaging_solution: str, threshold: float):
+
     eligible_subjects, subjects_annotations = read_annotations(database_path)
     eligible_subjects_length = len(eligible_subjects)
 
@@ -331,11 +332,11 @@ def generate(mode: str, database_path: str, storage_path: str, sample_frequency:
         test_size = 0
     elif mode == "subject_spec":
         test_size = 1 / eligible_subjects_length
-        times_to_run = eligible_subjects_length
+        # times_to_run = eligible_subjects_length
 
     for run in range(times_to_run):
         # randomly chooses test subjects for this dataset
-        test_subjects = eligible_subjects[run:run+math.floor(test_size * eligible_subjects_length)]
+        test_subjects = [test_subject]
 
         generate_rp_images_dataset(database_path, storage_path, sample_frequency, frame_length, frame_shift,
                                    imaging_solution, threshold, test_subjects)

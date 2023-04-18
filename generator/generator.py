@@ -5,8 +5,9 @@ from datetime import timedelta
 start = time.time()
 
 # CONFIGURE THIS
-MODE = "default"
-DATABASE_PATH = "../physionet.org/files/ucddb/1.0.0/"
+MODE = "subject_spec"
+TEST_SUBJECT = 22
+DATABASE_PATH = "E:/tcc/base1/physionet.org/files/ucddb/1.0.0/"
 STORAGE_PATH = "C:/Users/saman/Documents/storage/"
 FRAME_LENGTH = 8
 FRAME_SHIFT = 5
@@ -17,6 +18,7 @@ SAMPLE_FREQUENCY = 128
 
 generator_lib.generate(
     MODE,
+    TEST_SUBJECT,
     DATABASE_PATH,
     STORAGE_PATH,
     SAMPLE_FREQUENCY,
